@@ -1,0 +1,19 @@
+[package]
+name = "monoxidd-parser"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# parser
+nom = "7"
+# error reporting
+codespan-reporting = { version = "0.13", optional = true }
+# byte string utilities
+memchr = "2"
+# bit vectors
+fixedbitset = "0.5.7"
+[features]
+default = ["load-file"]
+
+## Convenience functions etc. to load a problem from file ([`load_file()`])
+load-file = ["dep:codespan-reporting"]
