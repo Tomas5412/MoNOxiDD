@@ -5,10 +5,11 @@ use nom::multi::many0_count;
 use nom::sequence::{preceded};
 use nom::{Err, IResult};
 use nom::branch::alt;
-use crate::{Circuit, Literal, VarSet};
+use monoxidd::{Circuit, Literal, VarSet};
 use crate::util::{
     self, MAX_CAPACITY, context_loc, fail, line_span, word, word_span, weight_line
 };
+
 
 /// Checks if the format is correctly cnf
 fn cnf_format<'a, E: ParseError<&'a [u8]> + ContextError<&'a [u8]>>(
@@ -71,8 +72,6 @@ struct Preamble {
 
 }
 
-
-
 /// Parses the preamble, i.e., all `c` and `p` lines at the beginning of the
 /// file
 fn preamble<'a, E>() -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Preamble, E>
@@ -90,10 +89,6 @@ where
     }
 }
 
-
-
-
-
 #[derive(Clone, Copy, PartialEq, Debug)]
     enum TokenKind {
         Int(u64),
@@ -106,8 +101,6 @@ where
         span: &'a [u8],
         kind: TokenKind,
     }
-
-
 
 fn lex<'a, E: ParseError<&'a [u8]> + ContextError<&'a [u8]>>(
     input: &'a [u8],
@@ -222,9 +215,9 @@ mod tests {
         assert!(rest.is_empty());
         assert_eq!(circuit.num_clauses(), 2);
         assert_eq!(circuit.num_weights(),3);
-        assert_eq!(circuit.weights[&0].get_weights(), (Some(0.9),Some(0.1)));
-        assert_eq!(circuit.weights[&1].get_weights(), (None, None));
-        assert_eq!(circuit.weights[&2].get_weights(), (None, None));
+        assert_eq!(circuit.get_weights()[&0].get_weights(), (Some(0.9),Some(0.1)));
+        assert_eq!(circuit.get_weights()[&1].get_weights(), (None, None));
+        assert_eq!(circuit.get_weights()[&2].get_weights(), (None, None));
     }
 
     #[test]

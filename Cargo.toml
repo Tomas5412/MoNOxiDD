@@ -1,0 +1,8 @@
+[workspace]
+members = ["monoxidd", "monoxidd-parser", "monoxidd-cnf", "monoxidd-cli"]
+resolver = "3"
+
+[workspace.dependencies]
+monoxidd        = { path = "monoxidd" }
+monoxidd-parser = { path = "monoxidd-parser" }
+monoxidd-cnf    = { path = "monoxidd-cnf" }

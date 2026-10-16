@@ -1,4 +1,4 @@
-use crate::Circuit;
+use monoxidd::Circuit;
 use crate::parser::parse;
 
 use std::fmt;
@@ -167,8 +167,8 @@ mod tests {
         let (rest, circuit) = parse::<TestError>()(&input).expect("parse failed");
         assert!(rest.is_empty());
         println!("{} clauses", circuit.num_clauses());
-        println!("{:?}", circuit.clauses);
-        for (value, weight) in &circuit.weights {
+        println!("{:?}", circuit.get_clauses());
+        for (value, weight) in &circuit.get_weights() {
             println!("{:?}", value);
             println!("{:?}",weight.get_weights());
         }

@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+
+monoxidd = { workspace = true}
+
 # parser
 nom = "7"
 # error reporting
