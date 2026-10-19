@@ -1,0 +1,5 @@
+c expected value: 0.1
+p cnf 1 1
+1 0
+c p weight 1 0.1 0
+c p weight -1 0.9 0

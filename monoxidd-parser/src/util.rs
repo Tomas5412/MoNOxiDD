@@ -17,6 +17,7 @@ use nom::{
 
 pub const MAX_CAPACITY: u64 = (usize::MAX / 2 / size_of::<usize>()) as u64;
 
+#[warn(unused)] //TODO: Remove?
 pub fn usize<I, E>(input: I) -> IResult<I, usize, E>
 where
     I: InputIter + Slice<RangeFrom<usize>> + Slice<RangeTo<usize>> + InputLength + AsBytes + Clone,
@@ -32,7 +33,8 @@ where
     }
 }
 
-/// Optionally space-preceded end of line
+
+#[warn(unused)] //TODO: Remove?
 pub fn eol<I, E>(input: I) -> IResult<I, (), E>
 where
     I: Slice<Range<usize>>
@@ -112,6 +114,7 @@ pub fn fail<I: Clone, O, E: ParseError<I> + ContextError<I>>(
     )))
 }
 
+#[warn(unused)] //TODO: Remove?
 pub fn fail_with_contexts<I, O, E, It>(ctxs: It) -> IResult<I, O, E>
 where
     I: Clone,

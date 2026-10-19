@@ -65,7 +65,7 @@ fn problem_line<'a, E: ParseError<&'a [u8]> + ContextError<&'a [u8]>>(
 
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-struct Preamble {
+pub struct Preamble {
     vars: VarSet,
     num_clauses: usize,
     // clause_tree: Option<Tree<usize>>,
@@ -78,7 +78,7 @@ fn preamble<'a, E>() -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Preamble, E>
 where
     E: ParseError<&'a [u8]> + ContextError<&'a [u8]> + FromExternalError<&'a [u8], String>,
 {
-    move |mut input| {
+    move |input| {
             let (input, (num_vars, num_clauses)) =
                 preceded(many0_count(util::comment), problem_line)(input)?;
             let preamble = Preamble {
@@ -184,7 +184,7 @@ pub fn parse_input<'a, E>(
                     format!("expected {num_clauses} clauses, got {num_found}"),
                 )));
             }
-            let num_gates = circuit.num_clauses(); // may have been decremented above
+            let _num_gates = circuit.num_clauses(); // may have been decremented above
 
             Ok((input, circuit))
         }

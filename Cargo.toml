@@ -6,3 +6,6 @@ resolver = "3"
 monoxidd        = { path = "monoxidd" }
 monoxidd-parser = { path = "monoxidd-parser" }
 monoxidd-cnf    = { path = "monoxidd-cnf" }
+monoxidd-cli    = { path = "monoxidd-cli"}
+oxidd = {path = "../oxidd/crates/oxidd" }
+oxidd-core = {path = "../oxidd/crates/oxidd-core"}

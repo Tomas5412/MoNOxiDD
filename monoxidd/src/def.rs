@@ -83,6 +83,7 @@ impl Literal {
     /// (`0`)
     #[track_caller]
     #[inline]
+    #[warn(unused)] //TODO: Remove?
     const fn from_input_or_false(negative: bool, input: Var) -> Self {
         debug_assert!(input <= Self::MAX_INPUT + 1, "input too large");
         Self((input << Self::VAR_LSB) | ((negative as usize) << Self::POLARITY_BIT))
@@ -312,7 +313,7 @@ impl VarSet {
     }
 }
 
-type Clause = Vec<Literal>;
+pub type Clause = Vec<Literal>;
 
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct Clauses2d{
@@ -353,9 +354,24 @@ impl Clauses2d {
         !self.clauses.pop().is_none()
     }
 
+    /// One clause as a slice: no copy, no allocation.
+    pub fn clause(&self, i: usize) -> Option<&[Literal]> {
+        self.clauses.get(i).map(|c| c.as_slice())
+    }
+
+    /// One literal, returned by value because `Literal: Copy`.
+    pub fn literal(&self, clause: usize, pos: usize) -> Option<Literal> {
+        self.clauses.get(clause)?.get(pos).copied()
+    }
+
+    /// Iterate over all clauses without copying.
+    pub fn iter(&self) -> impl Iterator<Item = &[Literal]> {
+        self.clauses.iter().map(|c| c.as_slice())
+    }
+
 }
 
-type WeightMap = HashMap<Var,Weight>;
+pub type WeightMap = HashMap<Var,Weight>;
 
 /// Circuit of the cunjunctive normal form, where the clauses are in the form of a 2d vector.
 #[derive(Clone, PartialEq)]
@@ -387,6 +403,11 @@ impl Circuit {
     pub fn inputs(&self) -> &VarSet {
         &self.inputs
     }
+
+    pub fn num_inputs(&self) -> usize {
+        self.inputs.len
+    }
+
     /// Get a mutable reference to the circuit inputs
     #[inline(always)]
     pub fn inputs_mut(&mut self) -> &mut VarSet {
@@ -443,11 +464,19 @@ impl Circuit {
         self.clauses.pop_clause()
     }
 
-    ///// Iterate over all gates in the circuit
-    /////
-    ///// The iteration order is from first to last in the gate sequence.
-    //#[inline(always)]
-    //pub fn iter_gates(&self) -> CircuitGateIter<'_> {
-    //    CircuitGateIter(self.gates.iter())
-    //}
+    /// Iterate over all clauses in the circuit
+    ///
+    /// The iteration order is from first to last in the sequence.
+    #[inline(always)]
+    pub fn iter_clauses(&self) -> impl Iterator<Item = &[Literal]> {
+        self.clauses.iter()
+    }
+
+    /// Iterate over all `(variable, weight)` entries.
+    ///
+    /// The order is unspecified (hash map order).
+    #[inline(always)]
+    pub fn iter_weights(&self) -> impl Iterator<Item = (&usize, &Weight)> {
+        self.weights.iter()
+    }
 }
