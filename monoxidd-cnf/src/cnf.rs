@@ -9,17 +9,19 @@ use oxidd::util::AllocResult;
 use oxidd_core::Manager;
 use oxidd::Function;
 
+use std::time::Instant;
+
 pub type Node = MTBDDFunction<F64>;
 
 fn weighted_literal<'id>(
 		manager: &<Node as Function>::Manager<'id>,
-		weight: Weight, 
+		neg_w: f64,
+        pos_w: f64, 
 		var:&Node, 
 		one:&Node
 	) -> AllocResult<Node> {
-	let (neg_w, pos_w) = weight.get_weights();
-	let c_true = MTBDDFunction::constant(manager, F64::from(pos_w.unwrap_or(1.0)))?;
-    let c_false = MTBDDFunction::constant(manager, F64::from(neg_w.unwrap_or(1.0)))?;
+	let c_true = MTBDDFunction::constant(manager, F64::from(pos_w))?;
+    let c_false = MTBDDFunction::constant(manager, F64::from(neg_w))?;
     let true_branch = var.mul(&c_true)?;
     let false_branch = one.sub(var)?.mul(&c_false)?;
     true_branch.add(&false_branch)
@@ -62,13 +64,21 @@ fn translate_weights<'id>(
         .iter_weights()
         .map(|(&var, weight)| {
             let v = Node::var(manager, var as VarNo)?;
-            weighted_literal(manager, weight.clone(), &v, one)
+            let (neg_w, pos_w) = weight.get_weights();
+            weighted_literal(manager, neg_w.unwrap_or(1.0), pos_w.unwrap_or(1.0), &v, one)
         })
         .collect()
 }
 
-fn total_weight(weights: &[Node], one: &Node) -> AllocResult<Node> {
-    weights.iter().try_fold(one.clone(), |acc, w| acc.mul(w))
+fn total_weight<'id>(manager: &<Node as Function>::Manager<'id>, circuit: &Circuit, one: &Node) -> AllocResult<Node> {
+    let mut res = one.clone();
+    for (&var, weight) in circuit.iter_weights() {
+        let (neg_w, pos_w) = weight.get_weights();
+        let v = Node::var(manager, var as VarNo)?;
+        let literal = weighted_literal(manager, neg_w.unwrap_or(1.0), pos_w.unwrap_or(1.0), &v, one)?;
+        res = res.mul(&literal)?;
+    }
+    Ok(res)
 }
 
 fn formula<'id>(
@@ -93,15 +103,26 @@ pub fn mono_wmc<'id>(
     one: &Node
 ) -> AllocResult<F64> {
 
+    let mut now = Instant::now();
 	let f = formula(manager, &circuit, one)?;
-	let ws = translate_weights(manager, &circuit, one)?;
-	let weight = total_weight(&ws, one)?;
-
-	Ok(f.wmc(&weight))
+    println!("time elapsed calculating the clauses: {:.2?}", now.elapsed());
+    println!("gc count after calculating the clauses: {}", manager.gc());
+    println!("inner node count after calculating the clauses: {}", manager.num_inner_nodes());
+	now = Instant::now();
+	let weight = total_weight(manager, &circuit, one)?;
+    println!("time elapsed calculating the weights: {:.2?}", now.elapsed());
+    println!("gc count after calculating the weights: {}", manager.gc());
+    println!("inner node count after calculating the clauses: {}", manager.num_inner_nodes());
+    now = Instant::now();
+    let res = f.wmc(&weight);
+    println!("time elapsed calculating the wmc: {:.2?}", now.elapsed());
+    println!("gc count after calculating the wmc: {}", manager.gc());
+    println!("inner node count after calculating the clauses: {}", manager.num_inner_nodes());
+	Ok(res)
 }
 
 fn setup_manager(num_vars: usize) -> MTBDDManagerRef<F64> {
-    let manager_ref: MTBDDManagerRef<F64> = oxidd::mtbdd::new_manager(1024, 1024, 1024, 1);
+    let manager_ref: MTBDDManagerRef<F64> = oxidd::mtbdd::new_manager(73741824, 8000000, 73741824, 16);
     manager_ref.with_manager_exclusive(|manager| {
         manager.add_vars(u32::try_from(num_vars).expect("too many variables"));
     });
@@ -120,6 +141,7 @@ pub fn calculate_wmc(circuit: &Circuit) -> AllocResult<F64>{
 
 	manager_ref.with_manager_shared(|manager| -> AllocResult<F64> {
     	let one = Node::constant(manager, F64::from(1.0))?;
-    	mono_wmc(manager, circuit, &one)
+    	let res = mono_wmc(manager, circuit, &one);
+        res
 	})
 }
