@@ -21,19 +21,16 @@ pub struct FaultTreeNormalizer<T> {
     pub lookup_table: HashMap<String, NodeId>,
     pub nodes: IndexVec<NodeId, Node<T>>,
     pub root_id: NodeId,
-    pub node_counter: AtomicUsize,
+    pub node_counter: usize,
 }
 
 impl Clone for FaultTreeNormalizer<String> {
     fn clone(&self) -> Self {
-        let count = self.node_counter.load(std::sync::atomic::Ordering::Relaxed);
-        let node_counter = AtomicUsize::new(count);
-
         FaultTreeNormalizer {
             lookup_table: self.lookup_table.clone(),
             nodes: self.nodes.clone(),
             root_id: self.root_id,
-            node_counter,
+            node_counter: self.node_counter,
         }
     }
 }
@@ -44,7 +41,7 @@ impl Default for FaultTreeNormalizer<String> {
             lookup_table: HashMap::new(),
             nodes: IndexVec::new(),
             root_id: NodeId::new(0),
-            node_counter: AtomicUsize::new(0),
+            node_counter: (0 as usize),
         }
     }
 }
@@ -78,17 +75,16 @@ fn parse_basic_event(name: &str, args: &[String]) -> (String, BasicEvent) {
 }
 
 impl FaultTreeNormalizer<String> {
-    pub fn new_id(&self) -> NodeId {
-        NodeId::new(
-            self.node_counter
-                .fetch_add(1, std::sync::atomic::Ordering::Relaxed),
-        )
+    pub fn new_id(&mut self) -> NodeId {
+        let id = self.node_counter;
+        self.node_counter += 1;
+        NodeId::new(id)
     }
 
     /// Method that reads the file, and create a node for each of the lines in the file.
     /// Only create Basic Events and Placeholders.
     /// Keeps track of the gates with only one root (expect NOT), so later it can then be simplified.
-    fn read_file(&mut self, filename: &str, simplify: bool) -> String {
+    fn read_file(&mut self, filename: &str) -> String {
         let lines = _read_lines(filename);
         let mut root_name: String = "System".to_owned();
         let mut replace_mapper: HashMap<String, String> = HashMap::new();
@@ -154,25 +150,19 @@ impl FaultTreeNormalizer<String> {
                         })
                         .collect_vec();
 
-                    if simplify {
-                        if args.len() == 1 {
-                            replace_mapper.insert(name.clone(), args.first().unwrap().to_string());
-                            if root_name == name {
-                                root_name = args.first().unwrap().to_string();
-                            }
-                        } else {
-                            let nid = self.new_id();
-                            let node = Node::PlaceHolder(
-                                name.to_owned(),
-                                op.to_lowercase().to_string(),
-                                args,
-                            );
-                            self.add_node(name.to_string(), node, nid);
+
+                    if args.len() == 1 {
+                        replace_mapper.insert(name.clone(), args.first().unwrap().to_string());
+                        if root_name == name {
+                            root_name = args.first().unwrap().to_string();
                         }
                     } else {
                         let nid = self.new_id();
-                        let node =
-                            Node::PlaceHolder(name.to_owned(), op.to_lowercase().to_string(), args);
+                        let node = Node::PlaceHolder(
+                            name.to_owned(),
+                            op.to_lowercase().to_string(),
+                            args,
+                        );
                         self.add_node(name.to_string(), node, nid);
                     }
                 }
@@ -185,9 +175,9 @@ impl FaultTreeNormalizer<String> {
                 _ => {}
             };
         }
-        if simplify {
-            self.preprocess_placeholders(replace_mapper);
-        };
+        
+        self.preprocess_placeholders(replace_mapper);
+        
         root_name
     }
 
@@ -353,8 +343,8 @@ impl FaultTreeNormalizer<String> {
     }
 
     /// Public method to read the FT from the File, apply simplifications and replace the placeholders.
-    pub fn read_from_file(&mut self, filename: &str, simplify: bool) {
-        let root_name: String = self.read_file(filename, simplify);
+    pub fn read_from_file(&mut self, filename: &str) {
+        let root_name: String = self.read_file(filename);
         self.fill_placeholders(false);
         let root_id = self.lookup_table.get(&root_name).unwrap();
         self.root_id = *root_id;

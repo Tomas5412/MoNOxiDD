@@ -380,8 +380,10 @@ version = "0.1.0"
 name = "monoxidd-cli"
 version = "0.1.0"
 dependencies = [
+ "clap",
  "monoxidd",
  "monoxidd-cnf",
+ "monoxidd-fta",
  "monoxidd-parser",
 ]
 

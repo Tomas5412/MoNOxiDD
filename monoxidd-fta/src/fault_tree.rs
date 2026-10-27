@@ -6,7 +6,6 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
-use std::sync::atomic::AtomicUsize;
 
 use crate::fault_tree_normalizer::FaultTreeNormalizer;
 use crate::formula::Formula;
@@ -20,7 +19,6 @@ impl<T> From<FaultTreeNormalizer<T>> for FaultTree<T> {
             nodes: ft_norm.nodes,
             root_id: ft_norm.root_id,
             node_counter: ft_norm.node_counter,
-            negate_or: false,
         }
     }
 }
@@ -33,10 +31,7 @@ where
         FaultTree {
             nodes: self.nodes.clone(),
             root_id: self.root_id,
-            node_counter: AtomicUsize::new(
-                self.node_counter.load(std::sync::atomic::Ordering::Relaxed),
-            ),
-            negate_or: self.negate_or,
+            node_counter: self.node_counter,
         }
     }
 }
@@ -51,8 +46,7 @@ where
 pub struct FaultTree<T> {
     pub nodes: IndexVec<NodeId, Node<T>>,
     pub root_id: NodeId,
-    node_counter: AtomicUsize,
-    negate_or: bool,
+    node_counter: usize,
 }
 
 impl FaultTree<String> {
@@ -60,17 +54,15 @@ impl FaultTree<String> {
         FaultTree {
             nodes: IndexVec::new(),
             root_id: NodeId::new(0),
-            node_counter: AtomicUsize::new(0),
-            negate_or: false,
+            node_counter: (0 as usize),
         }
     }
 
     /// Generate a FT from a dft file.
-    pub fn new_from_file(filename: &str, simplify: bool, negate_or: bool) -> Self {
+    pub fn new_from_file(filename: &str) -> Self {
         let mut ft_norm = FaultTreeNormalizer::default();
-        ft_norm.read_from_file(filename, simplify);
+        ft_norm.read_from_file(filename);
         let mut ft = FaultTree::from(ft_norm);
-        ft.negate_or = negate_or;
         ft
     }
 
@@ -84,10 +76,10 @@ impl FaultTree<String> {
         self.nodes.insert(nid, node)
     }
 
-    fn new_id(&self) -> NodeId {
+    fn new_id(&mut self) -> NodeId {
+        self.node_counter += 1;
         NodeId::new(
-            self.node_counter
-                .fetch_add(1, std::sync::atomic::Ordering::Relaxed),
+            self.node_counter,
         )
     }
 
@@ -135,7 +127,7 @@ impl FaultTree<String> {
 
     /// Return number of nodes in the tree.
     pub fn get_count(&self) -> usize {
-        self.node_counter.load(std::sync::atomic::Ordering::Relaxed)
+        self.node_counter
     }
 
     /// Get useful information from the Tree.
@@ -197,11 +189,7 @@ impl FaultTree<String> {
 
     /// Apply the tseitin transformation to all the nodes in the tree.
     pub fn apply_tseitin(&self) -> Formula<NodeId> {
-        let mut args = if self.nodes[self.root_id].is_or() && self.negate_or {
-            vec![Formula::Not(Box::new(Formula::Atom(self.root_id)))]
-        } else {
-            vec![Formula::Atom(self.root_id)]
-        };
+        let mut args = vec![Formula::Atom(self.root_id)];
 
         for (nid, node) in self.nodes.iter_enumerated() {
             match node.tseitin_transformation(nid) {
@@ -216,11 +204,7 @@ impl FaultTree<String> {
     }
 
     pub fn apply_tseitin_used_only(&self) -> Formula<NodeId> {
-        let mut args = if self.nodes[self.root_id].is_or() && self.negate_or {
-            vec![Formula::Not(Box::new(Formula::Atom(self.root_id)))]
-        } else {
-            vec![Formula::Atom(self.root_id)]
-        };
+        let mut args = vec![Formula::Atom(self.root_id)];
 
         let mut to_process = vec![self.root_id];
         let mut seen = vec![self.root_id];
@@ -253,9 +237,8 @@ impl FaultTree<String> {
         filename: String,
         timepoint: f64,
         w_file: Option<String>,
-        unav: bool,
     ) {
-        let (formula_cnf, weights) = self.implicit_formula(timepoint, unav);
+        let (formula_cnf, weights) = self.implicit_formula(timepoint, false);
 
         let mut f = File::create(filename).expect("unable to create file");
         f.write_all(formula_cnf.as_bytes())
