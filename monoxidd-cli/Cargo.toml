@@ -7,3 +7,5 @@ edition = "2024"
 monoxidd        = { workspace = true }
 monoxidd-parser = { workspace = true, features = ["load-file"] }
 monoxidd-cnf    = { workspace = true }
+monoxidd-fta    = { workspace = true }
+clap 			= { version = "4.4.8", features = ["derive"] }

@@ -22,9 +22,7 @@ fn weighted_literal<'id>(
 	) -> AllocResult<Node> {
 	let c_true = MTBDDFunction::constant(manager, F64::from(pos_w))?;
     let c_false = MTBDDFunction::constant(manager, F64::from(neg_w))?;
-    let true_branch = var.mul(&c_true)?;
-    let false_branch = one.sub(var)?.mul(&c_false)?;
-    true_branch.add(&false_branch)
+    var.ite(&c_true,&c_false)
 }
 
 /// The 0/1 indicator of a literal: `x` for a positive literal, `1 - x` for a negative one.
@@ -130,9 +128,7 @@ fn setup_manager(num_vars: usize) -> MTBDDManagerRef<F64> {
 }
 
 
-#[derive(Debug)]
-#[warn(unused)]
-enum WmcType {
+pub enum WmcType {
     MonoWmc,
 }
 
