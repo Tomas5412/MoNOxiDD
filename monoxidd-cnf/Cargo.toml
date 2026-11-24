@@ -7,3 +7,4 @@ edition = "2024"
 monoxidd        = { workspace = true }
 oxidd = {path = "../../oxidd/crates/oxidd" }
 oxidd-core = {path = "../../oxidd/crates/oxidd-core"}
+rand = "0.10.4"

@@ -1,8 +1,5 @@
 use itertools::Itertools;
-use std::{
-    fmt::{Debug, Display},
-    str::FromStr,
-};
+use std::fmt::{Debug, Display};
 
 /// A propositional logic formula.
 #[non_exhaustive]

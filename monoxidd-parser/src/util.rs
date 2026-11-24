@@ -17,39 +17,6 @@ use nom::{
 
 pub const MAX_CAPACITY: u64 = (usize::MAX / 2 / size_of::<usize>()) as u64;
 
-#[warn(unused)] //TODO: Remove?
-pub fn usize<I, E>(input: I) -> IResult<I, usize, E>
-where
-    I: InputIter + Slice<RangeFrom<usize>> + Slice<RangeTo<usize>> + InputLength + AsBytes + Clone,
-    I::Item: AsChar,
-    E: ParseError<I> + ContextError<I>,
-{
-    let (remaining, res) = u64(input.clone())?;
-    if res > MAX_CAPACITY {
-        let span = word_span(input);
-        fail(span, "number too large")
-    } else {
-        Ok((remaining, res as usize))
-    }
-}
-
-
-#[warn(unused)] //TODO: Remove?
-pub fn eol<I, E>(input: I) -> IResult<I, (), E>
-where
-    I: Slice<Range<usize>>
-        + Slice<RangeFrom<usize>>
-        + Slice<RangeTo<usize>>
-        + InputIter
-        + InputLength
-        + InputTakeAtPosition
-        + Compare<&'static str>,
-    <I as InputTakeAtPosition>::Item: AsChar + Clone,
-    E: ParseError<I>,
-{
-    preceded(space0, value((), line_ending))(input)
-}
-
 pub fn word<I, O, E, F>(mut parser: F) -> impl FnMut(I) -> IResult<I, O, E>
 where
     I: Clone + Slice<RangeTo<usize>> + AsBytes,
@@ -113,23 +80,6 @@ pub fn fail<I: Clone, O, E: ParseError<I> + ContextError<I>>(
         E::from_error_kind(span, ErrorKind::Fail),
     )))
 }
-
-#[warn(unused)] //TODO: Remove?
-pub fn fail_with_contexts<I, O, E, It>(ctxs: It) -> IResult<I, O, E>
-where
-    I: Clone,
-    E: ParseError<I> + ContextError<I>,
-    It: IntoIterator<Item = (I, &'static str)>,
-{
-    let mut iter = ctxs.into_iter();
-    let (span, msg) = iter.next().expect("At least one context required");
-    let mut err = E::add_context(span.clone(), msg, E::from_error_kind(span, ErrorKind::Fail));
-    for (span, msg) in iter {
-        err = E::add_context(span, msg, err);
-    }
-    Err(Err::Failure(err))
-}
-
 
 
 // A comment line starting with 'c'. Consumes everything until the next '\n'

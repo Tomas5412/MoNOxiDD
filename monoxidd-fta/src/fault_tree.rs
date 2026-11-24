@@ -1,17 +1,13 @@
 use index_vec::IndexVec;
-use indicatif::ParallelProgressIterator;
 use itertools::Itertools;
 use nodes::{Node, NodeId};
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 
 use crate::fault_tree_normalizer::FaultTreeNormalizer;
 use crate::formula::Formula;
-use crate::nodes::{self, BasicEvent};
-
-type ImpMeasures = (f64, f64, f64);
+use crate::nodes::{self};
 
 impl<T> From<FaultTreeNormalizer<T>> for FaultTree<T> {
     fn from(ft_norm: FaultTreeNormalizer<T>) -> Self {

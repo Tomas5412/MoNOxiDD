@@ -1,7 +1,6 @@
 use monoxidd_cnf::calculate_wmc;
 use monoxidd_parser::load_file;
 use monoxidd_fta::fault_tree::FaultTree;
-use std::env;
 use std::process::ExitCode;
 use clap::Parser;
 use structs::*;
@@ -33,12 +32,19 @@ enum Command {
 }
 
 
-fn cnf_wc(filepath:&str) -> ExitCode {
+fn cnf_wc(
+    filepath:&str,
+    debug: bool, 
+    wmc_type: &str,
+    diagram_var_order: &str,
+    cluster_var_order: &str,
+    cluster_rank: &str,
+    choose_cluster: &str) -> ExitCode {
     let Some(circuit) = load_file(filepath) else {
-        return ExitCode::FAILURE; // load_file presumably already reported the parse error
+        return ExitCode::FAILURE; // the parser displayed the relevant errors
     };
 
-    let model_count = match calculate_wmc(&circuit) {
+    let model_count = match calculate_wmc(&circuit, debug, &wmc_type, &diagram_var_order, &cluster_var_order, &cluster_rank, &choose_cluster) {
     Ok(v) => v,
     Err(_) => {
         eprintln!("error: out of memory while building the diagrams");
@@ -52,7 +58,13 @@ fn cnf_wc(filepath:&str) -> ExitCode {
 
 fn cnf_command(command: CnfCommand) -> ExitCode {
     let filepath = command.input;
-    cnf_wc(&filepath)
+    let debug = command.debug;
+    let wmc_type = command.wmc_type;
+    let diagram_var_order = command.diagram_var_order;
+    let cluster_var_order = command.cluster_var_order;
+    let cluster_rank = command.cluster_rank;
+    let choose_cluster = command.choose_cluster;
+    cnf_wc(&filepath, debug, &wmc_type, &diagram_var_order, &cluster_var_order, &cluster_rank, &choose_cluster)
 }
 
 fn ft_wmc(command: FTCommand) -> ExitCode {
@@ -66,7 +78,15 @@ fn ft_wmc(command: FTCommand) -> ExitCode {
         command.timepoint,
         w_file,
     );
-    cnf_wc(&filepath)
+
+    let debug = command.debug;
+    let wmc_type = command.wmc_type;
+    let diagram_var_order = command.diagram_var_order;
+    let cluster_var_order = command.cluster_var_order;
+    let cluster_rank = command.cluster_rank;
+    let choose_cluster = command.choose_cluster;
+
+    cnf_wc(&filepath, debug, &wmc_type, &diagram_var_order, &cluster_var_order, &cluster_rank, &choose_cluster)
 }
 
 

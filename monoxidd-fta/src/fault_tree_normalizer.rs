@@ -1,7 +1,6 @@
 use index_vec::IndexVec;
 use itertools::Itertools;
 use nodes::{Node, NodeId};
-use std::sync::atomic::AtomicUsize;
 use std::{collections::HashMap, fs::read_to_string};
 
 use crate::nodes::{self, BasicEvent, RepairMode};

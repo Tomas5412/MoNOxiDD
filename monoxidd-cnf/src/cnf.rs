@@ -1,19 +1,17 @@
-use monoxidd::{Circuit, Literal, Weight};
+// Auxiliar functions related to the building of cnfs into MTBDD.
 
-use oxidd::ManagerRef;
+use monoxidd::{Circuit, Literal};
+
 use oxidd::PseudoBooleanFunction;
 use oxidd::VarNo;
 use oxidd::mtbdd::terminal::F64;
-use oxidd::mtbdd::{MTBDDFunction, MTBDDManagerRef};
+use oxidd::mtbdd::{MTBDDFunction};
 use oxidd::util::AllocResult;
-use oxidd_core::Manager;
 use oxidd::Function;
-
-use std::time::Instant;
 
 pub type Node = MTBDDFunction<F64>;
 
-fn weighted_literal<'id>(
+pub fn weighted_literal<'id>(
 		manager: &<Node as Function>::Manager<'id>,
 		neg_w: f64,
         pos_w: f64, 
@@ -26,7 +24,7 @@ fn weighted_literal<'id>(
 }
 
 /// The 0/1 indicator of a literal: `x` for a positive literal, `1 - x` for a negative one.
-fn literal<'id>(
+pub fn literal<'id>(
     manager: &<Node as Function>::Manager<'id>,
     one: &Node,
     lit: Literal,
@@ -40,7 +38,7 @@ fn literal<'id>(
 }
 
 /// A clause is an OR of its literals. For 0/1-valued functions, OR is `max`.
-fn clause<'id>(
+pub fn clause<'id>(
     manager: &<Node as Function>::Manager<'id>,
     one: &Node,
     lits: &[Literal],
@@ -53,7 +51,7 @@ fn clause<'id>(
 }
 
 /// One weighted-literal function per entry of the weight map.
-fn translate_weights<'id>(
+pub fn translate_weights<'id>(
     manager: &<Node as Function>::Manager<'id>,
     circuit: &Circuit,
     one: &Node,
@@ -68,7 +66,7 @@ fn translate_weights<'id>(
         .collect()
 }
 
-fn total_weight<'id>(manager: &<Node as Function>::Manager<'id>, circuit: &Circuit, one: &Node) -> AllocResult<Node> {
+pub fn total_weight<'id>(manager: &<Node as Function>::Manager<'id>, circuit: &Circuit, one: &Node) -> AllocResult<Node> {
     let mut res = one.clone();
     for (&var, weight) in circuit.iter_weights() {
         let (neg_w, pos_w) = weight.get_weights();
@@ -79,7 +77,7 @@ fn total_weight<'id>(manager: &<Node as Function>::Manager<'id>, circuit: &Circu
     Ok(res)
 }
 
-fn formula<'id>(
+pub fn formula<'id>(
     manager: &<Node as Function>::Manager<'id>,
     circuit: &Circuit,
     one: &Node,
@@ -90,54 +88,4 @@ fn formula<'id>(
         acc = PseudoBooleanFunction::mul(&acc, &c)?;
     }
     Ok(acc)
-}
-
-
-/// Monolithic weighted model counting
-/// This uses the brute-force oxidd function
-pub fn mono_wmc<'id>(
-	manager: &<Node as Function>::Manager<'id>,
-    circuit: &Circuit,
-    one: &Node
-) -> AllocResult<F64> {
-
-    let mut now = Instant::now();
-	let f = formula(manager, &circuit, one)?;
-    println!("time elapsed calculating the clauses: {:.2?}", now.elapsed());
-    println!("gc count after calculating the clauses: {}", manager.gc());
-    println!("inner node count after calculating the clauses: {}", manager.num_inner_nodes());
-	now = Instant::now();
-	let weight = total_weight(manager, &circuit, one)?;
-    println!("time elapsed calculating the weights: {:.2?}", now.elapsed());
-    println!("gc count after calculating the weights: {}", manager.gc());
-    println!("inner node count after calculating the clauses: {}", manager.num_inner_nodes());
-    now = Instant::now();
-    let res = f.wmc(&weight);
-    println!("time elapsed calculating the wmc: {:.2?}", now.elapsed());
-    println!("gc count after calculating the wmc: {}", manager.gc());
-    println!("inner node count after calculating the clauses: {}", manager.num_inner_nodes());
-	Ok(res)
-}
-
-fn setup_manager(num_vars: usize) -> MTBDDManagerRef<F64> {
-    let manager_ref: MTBDDManagerRef<F64> = oxidd::mtbdd::new_manager(73741824, 8000000, 73741824, 16);
-    manager_ref.with_manager_exclusive(|manager| {
-        manager.add_vars(u32::try_from(num_vars).expect("too many variables"));
-    });
-    manager_ref
-}
-
-
-pub enum WmcType {
-    MonoWmc,
-}
-
-pub fn calculate_wmc(circuit: &Circuit) -> AllocResult<F64>{
-	let manager_ref = setup_manager(circuit.num_inputs());
-
-	manager_ref.with_manager_shared(|manager| -> AllocResult<F64> {
-    	let one = Node::constant(manager, F64::from(1.0))?;
-    	let res = mono_wmc(manager, circuit, &one);
-        res
-	})
 }

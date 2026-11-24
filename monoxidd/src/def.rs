@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fmt::{self, Write};
-
+use std::collections::HashSet;
 
 
 /// Variable type
@@ -478,5 +478,25 @@ impl Circuit {
     #[inline(always)]
     pub fn iter_weights(&self) -> impl Iterator<Item = (&usize, &Weight)> {
         self.weights.iter()
+    }
+
+    /// Get the weight structure of a certain variable.
+    pub fn get_weight_of(&self, var:Var) -> Option<&Weight> {
+        self.weights.get(&var)
+    }
+
+    /// Get the clause as a slice of literals.
+    ///
+    /// i should be the index of the clause in the vector.
+    pub fn get_clause(&self, i: usize) -> Option<&[Literal]> {
+        self.clauses.clause(i)
+    }
+
+    /// Get all variables used in one certain clause.
+    ///
+    /// i should be the index of the clause in the vector.
+    pub fn get_vars_of_clause(&self, i: usize) -> Option<HashSet<Var>> {
+        let lits = self.clauses.clause(i)?;
+        Some(lits.iter().filter_map(|l| l.get_input()).collect())
     }
 }

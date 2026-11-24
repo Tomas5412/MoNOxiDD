@@ -1,2 +1,4 @@
-pub mod cnf;
-pub use cnf::calculate_wmc;
+mod addmc;
+mod cnf;
+pub mod wmc;
+pub use wmc::calculate_wmc;
