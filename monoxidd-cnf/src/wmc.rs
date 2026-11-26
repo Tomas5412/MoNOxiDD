@@ -128,9 +128,12 @@ pub fn addmc<'id>(
 
         now = Instant::now();
         
-        let mut ai = mult_adds(one, k_i)?;
+        let mut ai = mult_adds(one, k_i)?; // Bottleneck on one-cluster!
+        println!("gc count after multiplying all of cluster {}: {}", i, manager.gc());
         for x in xi {
             ai = mult_and_project(manager, one, x, &pi, circuit, &ai)?;
+            if debug { println!("gc count projecting variable {}: {}", x, manager.gc()); } else { manager.gc(); }
+            
         }
     
         if i < m {
@@ -155,7 +158,7 @@ pub fn addmc<'id>(
 
 
 fn setup_manager(num_vars: usize) -> MTBDDManagerRef<F64> {
-    let manager_ref: MTBDDManagerRef<F64> = oxidd::mtbdd::new_manager(1900000, 2000000, 2000000, 16);
+    let manager_ref: MTBDDManagerRef<F64> = oxidd::mtbdd::new_manager(19000000, 20000000, 20000000, 16);
     manager_ref.with_manager_exclusive(|manager| {
         manager.add_vars(u32::try_from(num_vars).expect("too many variables"));
     });
